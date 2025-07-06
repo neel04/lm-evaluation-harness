@@ -1,6 +1,5 @@
 import logging
 import math
-import os
 import random
 import re
 import string
@@ -502,35 +501,7 @@ def bootstrap_stderr(
 
     Executes in parallel unless the env-var `DISABLE_MULTIPROC` is set;
     """
-    if not os.getenv("DISABLE_MULTIPROC"):
-        import multiprocessing as mp
-
-        pool = mp.Pool(mp.cpu_count())
-        # this gives a biased estimate of the stderr (i.e w/ the mean, it gives something
-        # equivalent to stderr calculated without Bessel's correction in the stddev.
-        # Unfortunately, I haven't been able to figure out what the right correction is
-        # to make the bootstrap unbiased - i considered multiplying by sqrt(n/(n-1)) but
-        # that would be ad-hoc and I can't prove that that would actually be an unbiased estimator)
-        # Thankfully, shouldn't matter because our samples are pretty big usually anyways
-        res = []
-        chunk_size = min(1000, iters)
-        from tqdm import tqdm
-
-        print("bootstrapping for stddev:", f.__name__)
-        for bootstrap in tqdm(
-            pool.imap(
-                _bootstrap_internal(f, chunk_size),
-                [(i, xs) for i in range(iters // chunk_size)],
-            ),
-            total=iters // chunk_size,
-        ):
-            # sample w replacement
-            res.extend(bootstrap)
-
-        pool.close()
-    else:
-        res = _bootstrap_internal_no_mp(f, xs, iters)
-
+    res = _bootstrap_internal_no_mp(f, xs, iters)
     return sample_stddev(res)
 
 
